@@ -1,0 +1,5 @@
+create table users(id uuid primary key default gen_random_uuid(),name text,email text unique not null,phone text,password_hash text not null,wallet numeric not null default 0 check(wallet>=0),is_admin boolean default false,created_at timestamptz default now());
+create table plans(id serial primary key,network text,name text,price numeric,code text,active boolean default true);
+create table transactions(id uuid primary key default gen_random_uuid(),user_id uuid references users(id),type text,amount numeric,detail jsonb,status text default 'pending',reference text unique,created_at timestamptz default now());
+create function adjust_wallet(uid uuid,amt numeric) returns numeric language sql as $$update users set wallet=wallet+amt where id=uid returning wallet$$;
+insert into plans(network,name,price,code) values('MTN','1GB 30 days',280,'CHANGE_ME'),('MTN','2GB 30 days',560,'CHANGE_ME'),('AIRTEL','1GB 30 days',270,'CHANGE_ME'),('GLO','1GB 30 days',250,'CHANGE_ME'),('9MOBILE','1GB 30 days',260,'CHANGE_ME');

@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GV DATA – Cheap Data, Airtime and Bills</title>
+<style>
+:root{--ink:#10251f;--g:#0f5c47;--y:#f5c400;--bg:#f6f7f2;--card:#fff;--mut:#5d6b66;--line:#dfe4dc;--bad:#b3261e}
+@media(prefers-color-scheme:dark){:root{--ink:#eef2ee;--bg:#0e1a16;--card:#16251f;--mut:#9fb0a8;--line:#27392f}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 5%;background:var(--g);color:#fff}
+header b{font-size:22px;letter-spacing:.5px}header b i{color:var(--y);font-style:normal}
+main{max-width:920px;margin:0 auto;padding:20px 5%}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+input,select,button{font:inherit;padding:11px 12px;border-radius:8px;border:1px solid var(--line);width:100%;margin:5px 0;background:var(--card);color:var(--ink)}
+button{background:var(--y);color:#10251f;font-weight:700;border:0;cursor:pointer}button.s{background:var(--g);color:#fff}button.l{background:none;color:#fff;width:auto;border:1px solid #fff;padding:6px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--y)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px}.tabs button{width:auto;white-space:nowrap;background:var(--card);border:1px solid var(--line)}.tabs button.on{background:var(--g);color:#fff}
+.bal{font-size:34px;font-weight:800}.hero{padding:34px 0}.hero h1{font-size:clamp(30px,6vw,52px);line-height:1.1;margin:0 0 10px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:8px;border-bottom:1px solid var(--line);text-align:left}.wrap{overflow-x:auto}
+.ok{color:var(--g)}.no{color:var(--bad)}#msg{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;display:none;max-width:90%}
+</style></head><body>
+<header><b>GV <i>DATA</i></b><span id="top"></span></header><main id="app"></main><div id="msg" role="status"></div>
+<script src="demo.js"></script>
+<script>
+const $=s=>document.querySelector(s),app=$('#app');let user=null,tab='data',plans=[];
+const tok=()=>localStorage.getItem('gv_t');
+async function api(r,body){const o={method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+(tok()||'')}};if(body)o.body=JSON.stringify(body);
+ const x=await fetch('/api?r='+r,o);const j=await x.json();if(!x.ok){if(x.status===401&&tok())out();throw new Error(j.error||'Error')}return j}
+function toast(m){const e=$('#msg');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',4000)}
+const N=n=>'₦'+Number(n).toLocaleString();
+function out(){localStorage.removeItem('gv_t');user=null;home()}
+function home(){$('#top').innerHTML='';app.innerHTML=`<section class="hero"><h1>Data, airtime and bills in seconds.</h1><p>MTN, Airtel, Glo and 9mobile data. Airtime, DSTV, GOTV and electricity. Fund your wallet once, buy anytime.</p></section>
+<div class="grid"><form class="card" id="lf"><h3>Log in</h3><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Password" required><button>Log in</button></form>
+<form class="card" id="rf"><h3>Create account</h3><input name="name" placeholder="Full name" required><input name="phone" placeholder="Phone number" required><input name="email" type="email" placeholder="Email" required><input name="password" type="password" placeholder="Password (6+ characters)" required><button class="s">Create account</button></form></div><h2>What you can buy</h2><div class="grid">${[['Data','MTN, Airtel, Glo and 9mobile bundles'],['Airtime','Instant top-up on every network'],['TV','DSTV and GOTV subscriptions'],['Electricity','Prepaid and postpaid meters']].map(s=>`<div class="card"><h3>${s[0]}</h3><p>${s[1]}</p></div>`).join('')}</div><footer style="text-align:center;color:var(--mut);padding:20px">© GV DATA. Support: add your WhatsApp number here.</footer>`;
+ for(const [id,rt] of [['lf','login'],['rf','register']])$('#'+id).onsubmit=async e=>{e.preventDefault();try{const j=await api(rt,Object.fromEntries(new FormData(e.target)));localStorage.setItem('gv_t',j.token);user=j.user;dash()}catch(x){toast(x.message)}}}
+async function dash(){try{user=await api('me');plans=await api('plans')}catch{return home()}
+ $('#top').innerHTML=`${user.name||''} <button class="l" onclick="out()">Log out</button>`;
+ const T=[['data','Buy data'],['airtime','Airtime'],['cable','TV'],['electricity','Electricity'],['fund','Fund wallet'],['history','History']];if(user.is_admin)T.push(['admin','Admin']);
+ app.innerHTML=`<div class="card">Wallet balance<div class="bal">${N(user.wallet)}</div></div><div class="tabs">${T.map(t=>`<button class="${t[0]===tab?'on':''}" onclick="tab='${t[0]}';dash()">${t[1]}</button>`).join('')}</div><div id="pane" class="card"></div>`;
+ views[tab]($('#pane'))}
+const form=(h,fn)=>p=>{p.innerHTML=`<form>${h}<button>Continue</button></form>`;p.firstChild.onsubmit=async e=>{e.preventDefault();try{await fn(Object.fromEntries(new FormData(e.target)))}catch(x){toast(x.message)}}};
+const buy=async d=>{if(!confirm('Confirm this purchase?'))return;const j=await api('buy',d);toast(j.message);dash()};
+const views={
+ data:form(`<select name="network" id="nw">${['MTN','AIRTEL','GLO','9MOBILE'].map(n=>`<option>${n}</option>`).join('')}</select><select name="plan_id" id="pl"></select><input name="phone" placeholder="Phone number" pattern="[0-9]{11}" required>`,d=>buy({service:'data',plan_id:d.plan_id,phone:d.phone})),
+ airtime:form(`<select name="network"><option>MTN</option><option>AIRTEL</option><option>GLO</option><option>9MOBILE</option></select><input name="phone" placeholder="Phone number" pattern="[0-9]{11}" required><input name="amount" type="number" min="50" placeholder="Amount" required>`,d=>buy({service:'airtime',...d})),
+ cable:form(`<select name="provider"><option>DSTV</option><option>GOTV</option></select><input name="number" placeholder="Smartcard / IUC number" required><input name="phone" placeholder="Phone number" required><input name="amount" type="number" min="50" placeholder="Amount" required>`,d=>buy({service:'cable',...d})),
+ electricity:form(`<select name="provider"><option>NEPA / Disco (enter name below)</option></select><select name="meter_type"><option>prepaid</option><option>postpaid</option></select><input name="number" placeholder="Meter number" required><input name="phone" placeholder="Phone number" required><input name="amount" type="number" min="500" placeholder="Amount" required>`,d=>buy({service:'electricity',...d})),
+ fund:form(`<p>Pay with card, transfer or USSD (Paystack).</p><input name="amount" type="number" min="100" placeholder="Amount (min 100)" required>`,async d=>{const j=await api('fund',d);location.href=j.url}),
+ history:async p=>{const h=await api('history');p.innerHTML=`<div class="wrap"><table><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr>${h.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${x.type}</td><td>${N(x.amount)}</td><td class="${x.status==='success'?'ok':'no'}">${x.status}</td></tr>`).join('')||'<tr><td colspan=4>No transactions yet.</td></tr>'}</table></div>`},
+ admin:async p=>{const a=await api('a_stats');p.innerHTML=`<h3>Total sales: ${N(a.sales)} · Users: ${a.users.length}</h3>
+ <h4>Add or update a data plan</h4><form id="pf"><input name="id" placeholder="Plan ID (leave empty to add new)"><input name="network" placeholder="Network e.g. MTN" required><input name="name" placeholder="Plan name e.g. 1GB 30 days" required><input name="price" type="number" placeholder="Your selling price" required><input name="code" placeholder="Provider plan code" required><button class="s">Save plan</button></form>
+ <h4>Plans</h4><div class="wrap"><table>${plans.map(x=>`<tr><td>${x.id}</td><td>${x.network}</td><td>${x.name}</td><td>${N(x.price)}</td></tr>`).join('')}</table></div>
+ <h4>Credit or debit a user</h4><form id="cf"><select name="user_id">${a.users.map(x=>`<option value="${x.id}">${x.email} (${N(x.wallet)})</option>`).join('')}</select><input name="amount" type="number" placeholder="Amount (negative to debit)" required><button class="s">Update wallet</button></form>
+ <h4>Latest transactions</h4><div class="wrap"><table>${a.transactions.map(x=>`<tr><td>${new Date(x.created_at).toLocaleString()}</td><td>${x.type}</td><td>${N(x.amount)}</td><td>${x.status}</td></tr>`).join('')}</table></div>`;
+ $('#pf').onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(!d.id)delete d.id;try{await api('a_plan',d);toast('Plan saved');dash()}catch(x){toast(x.message)}};
+ $('#cf').onsubmit=async e=>{e.preventDefault();try{await api('a_credit',Object.fromEntries(new FormData(e.target)));toast('Wallet updated');dash()}catch(x){toast(x.message)}}}
+};
+document.addEventListener('change',e=>{if(e.target.id==='nw')fill()});
+const _d=views.data;views.data=p=>{_d(p);fill()};
+function fill(){const n=$('#nw').value;$('#pl').innerHTML=plans.filter(x=>x.network===n).map(x=>`<option value="${x.id}">${x.name} – ${N(x.price)}</option>`).join('')}
+(async()=>{try{const c=await(await fetch('/api?r=config')).json();if(c.demo)throw 0}catch{api=window.demoApi;document.body.insertAdjacentHTML('afterbegin','<div style="background:#f5c400;color:#10251f;text-align:center;padding:6px;font-size:14px">DEMO MODE: no real money. Admin login: admin@gvdata.demo / admin123</div>')}const ref=new URLSearchParams(location.search).get('ref');if(ref&&tok()){try{const j=await api('verify',{reference:ref});toast(j.credited?'Wallet funded':'Payment not confirmed yet')}catch{}history.replaceState(null,'','/')}tok()?dash():home()})();
+</script></body></html>
